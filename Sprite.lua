@@ -17,3 +17,8 @@ function Sprite:_init()
 	self.height = 1
 	self.img = nil
 end
+function Sprite:loadImage(path)
+	self.img = love.graphics.newImage(path)
+	self.width = self.img:getWidth()
+	self.height = self.img:getHeight()
+end

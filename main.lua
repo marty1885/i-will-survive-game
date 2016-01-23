@@ -20,7 +20,7 @@ players = {}
 mobs = {}
 
 function love.load()
-	map = Map()
+	--map = Map()
 	sprite = Object()
 	sprite:loadImage("data/grass.png")
 	player = Player()
@@ -44,7 +44,7 @@ function love.load()
 
 	-- Create Map
 	sprite:setCoordinate(400, 500)
-	sprite:enablePhysics(Object_Types.Object, true)
+	--sprite:enablePhysics(Object_Types.Object, true)
 
 	-- Create Mob
 	mob:setCoordinate(400, 300)
@@ -53,32 +53,48 @@ function love.load()
 
 end
 
+local function mod(a,b)
+	return  a - math.floor(a/b)*b
+end
+
+local function clamp(n,min,max)
+	return math.min(math.max(n,min),max)
+end
+
 function love.update(dt)
 	world:update(dt)
 
+	local vx,vy = player.body:getLinearVelocity()
+	--clamp speed
+	local maxVelosity = 180
+	player.body:setLinearVelocity(clamp(vx,-maxVelosity,maxVelosity),
+		clamp(vy,-maxVelosity,maxVelosity))
+	vx,vy = player.body:getLinearVelocity()
+
+	local force = 1000
 	-- I always start with an easy way to exit the game
 	if love.keyboard.isDown('escape') then
 		love.event.push('quit')
 	end
 
 	if love.keyboard.isDown('left','a') then
-		player.body:applyForce(-100,0)
+		player.body:applyForce(-force,0)
 	end
 
 	if love.keyboard.isDown('right','d') then
-		player.body:applyForce(100,0)
+		player.body:applyForce(force,0)
 	end
 
 	if love.keyboard.isDown('up', 'w') then
-		player.body:applyForce(0,-100)
+		player.body:applyForce(0,-force)
 	end
 
 	if love.keyboard.isDown('down', 's') then
-		player.body:applyForce(0,100)
+		player.body:applyForce(0,force)
 	end
 
 	player:updateCoordinate()
-	sprite:updateCoordinate()
+	--sprite:updateCoordinate()
 	mob:updateCoordinate()
 end
 
@@ -86,11 +102,33 @@ function love.draw(dt)
 	camera:centerOn(player)
 	camera:apply()
 
-	love.graphics.draw(sprite.img, sprite.x, sprite.y)
-	love.graphics.draw(mob.img, mob.x, mob.y)
+	local x,y = camera:getTopRight()
+	local w,h = camera:getSize()
+	x = x - camera.offsetX
+	y = y - camera.offsetY
+	local spriteWidth = sprite.width * camera.zoomX
+	local spriteHeight = sprite.height * camera.zoomY
+	local startX = x - mod(x,spriteWidth)
+	local startY = y - mod(y,spriteHeight)
+
+	local yCoord = startY
+	while yCoord <= y+h do
+		local xCoord = startX
+		while xCoord <= x+w do
+			love.graphics.draw(sprite.img, xCoord, yCoord)
+			xCoord = xCoord + spriteWidth
+		end
+		yCoord = yCoord + spriteHeight
+	end
+
+	if camera:intersects(mob) then
+		love.graphics.draw(mob.img, mob.x, mob.y)
+	end
+
 	if camera:intersects(player) then
 		love.graphics.draw(player.img, player.x, player.y)
 	end
+
 	camera:deapply()
 	love.graphics.print("FPS = " ..love.timer.getFPS(), 0, 0)
 end

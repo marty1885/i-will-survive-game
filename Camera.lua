@@ -68,3 +68,11 @@ function Camera:centerOn(obj)
 	self.offsetX = -obj.x - obj.width/2 + self.width/2
 	self.offsetY = -obj.y - obj.height/2 + self.height/2
 end
+
+function Camera:getTopRight()
+	return self.x,self.y
+end
+
+function Camera:getSize()
+	return self.width, self.height
+end
