@@ -12,9 +12,15 @@ setmetatable(Mob, {
   end,
 })
 
-function Player:_init()
+function Mob:initMob()
 	self.x = 200
 	self.y = 200
 	self.speed = 200
-	self.img = nil
+	self.hit_point = 20
+	self.attack_point = 2
+	self.img = nil	
+end
+
+function Mob:_init()
+	self:initMob()
 end

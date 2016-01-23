@@ -8,29 +8,42 @@ require "Object"
 require "Player"
 require "Viewport"
 require "Weapon"
+require "Mob"
 
 player = nil
 sprite = nil
+mob = nil
 
+players = {}
+mobs = {}
 
 function love.load()
 	map = Map()
 	sprite = Object()
 	sprite:loadImage("data/grass.png")
 	player = Player()
+	player:loadImage("data/octocat.png")
+	mob = Mob()
+	mob:loadImage("data/free-bsd-32.png")
 
-	world = love.physics.newWorld(0,0,true)
+	-- Create World
+	world = love.physics.newWorld(0, 0, true)
+	world:setCallbacks(beginContact, endContact, preSolve, postSolve)
 
-	player.x = 400
-	player.y = 400
+	-- Create Player
+	player:setCoordinate(400, 400)
+	player:setSize(64, 64)
+	players[player:enablePhysics(Object_Types.Player, false)] = player
 
-	player.width = 64
-	player.height = 64
+	-- Create Map
+	sprite:setCoordinate(400, 500)
+	sprite:enablePhysics(Object_Types.Object, true)
 
-	sprite.x = 400
-	sprite.y = 500
-	sprite:enablePhysics("s",true)
-	player:enablePhysics("p",false)
+	-- Create Mob
+	mob:setCoordinate(400, 300)
+	mob:setSize(32, 32)
+	mobs[mob:enablePhysics(Object_Types.Mob, true)] = mob
+	
 end
 
 function love.update(dt)
@@ -59,9 +72,46 @@ function love.update(dt)
 
 	player:updateCoordinate()
 	sprite:updateCoordinate()
+	mob:updateCoordinate()
 end
 
 function love.draw(dt)
 	love.graphics.draw(sprite.img, sprite.x, sprite.y)
 	love.graphics.draw(player.img, player.x, player.y)
+	love.graphics.draw(mob.img, mob.x, mob.y)
+end
+
+function beginContact(a, b, coll)
+	if a:getUserData() ~= b:getUserData() then
+		local player_fixture = nil
+		local collide_fixture = nil
+		if a:getUserData() == Object_Types.Player then
+			player_fixture = a
+			collide_fixture = b
+		elseif b:getUserData() == Object_Types.Player then
+			player_fixture = b
+			collide_fixture = a
+		end
+
+		local collide_user_data = collide_fixture:getUserData()
+		if collide_user_data == Object_Types.Object then
+			-- do nothing
+		elseif collide_user_data == Object_Types.Weapon then
+			-- Get weapon
+		elseif collide_user_data == Object_Types.Mob then
+			players[player_fixture]:attacked(mobs[collide_fixture].attack_point)
+			print(players[player_fixture].hit_point)
+		end		
+	end				 
+end
+ 
+function endContact(a, b, coll)
+
+end
+ 
+function preSolve(a, b, coll)
+	
+end
+ 
+function postSolve(a, b, coll, normalimpulse1, tangentimpulse1, normalimpulse2, tangentimpulse2)
 end
