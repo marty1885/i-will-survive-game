@@ -8,9 +8,11 @@ require "Object"
 require "Player"
 require "Viewport"
 require "Weapon"
+require "Camera"
 
 player = nil
 sprite = nil
+camera = nil
 
 
 function love.load()
@@ -21,8 +23,8 @@ function love.load()
 
 	world = love.physics.newWorld(0,0,true)
 
-	player.x = 400
-	player.y = 400
+	player.x = 200
+	player.y = 200
 
 	player.width = 64
 	player.height = 64
@@ -31,6 +33,8 @@ function love.load()
 	sprite.y = 500
 	sprite:enablePhysics("s",true)
 	player:enablePhysics("p",false)
+
+	camera = Camera()
 end
 
 function love.update(dt)
@@ -62,6 +66,14 @@ function love.update(dt)
 end
 
 function love.draw(dt)
+	camera:centerOn(player)
+	camera:apply()
+
 	love.graphics.draw(sprite.img, sprite.x, sprite.y)
-	love.graphics.draw(player.img, player.x, player.y)
+
+	if camera:intersects(player) then
+		love.graphics.draw(player.img, player.x, player.y)
+	end
+	camera:deapply()
+	love.graphics.print("FPS = " ..love.timer.getFPS(), 0, 0)
 end
