@@ -1,10 +1,10 @@
-require "Player"
+require "Object"
 
-Mob = {}
-Mob.__index = Mob
+Item = {}
+Item.__index = Item
 
-setmetatable(Mob, {
-  __index  = Player,
+setmetatable(Item, {
+  __index  = Object,
   __call = function (cls, ...)
     local self = setmetatable({}, cls)
     self:_init(...)
@@ -13,8 +13,4 @@ setmetatable(Mob, {
 })
 
 function Player:_init()
-	self.x = 200
-	self.y = 200
-	self.speed = 200
-	self.img = nil
 end

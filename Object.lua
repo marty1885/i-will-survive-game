@@ -18,6 +18,12 @@ function Object:initObject()
 	self.img = nil
 end
 
+function Object:loadImage(path)
+	self.img = love.graphics.newImage(path)
+	self.width = self.img:getWidth()
+	self.height = self.img:getHeight()
+end
+
 function Object:_init()
 	self:initObject()
 end

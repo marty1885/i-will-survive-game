@@ -16,7 +16,7 @@ sprite = nil
 function love.load()
 	map = Map()
 	sprite = Object()
-	sprite.img = love.graphics.newImage("data/grass.png")
+	sprite:loadImage("data/grass.png")
 	player = Player()
 
 	world = love.physics.newWorld(0,0,true)
@@ -42,19 +42,18 @@ function love.update(dt)
 	end
 
 	if love.keyboard.isDown('left','a') then
-		player.x = player.x - (player.speed*dt)
+		player.body:applyForce(-100,0)
 	end
 
 	if love.keyboard.isDown('right','d') then
-		player.x = player.x + (player.speed*dt)
+		player.body:applyForce(100,0)
 	end
 
 	if love.keyboard.isDown('up', 'w') then
-		player.y = player.y - (player.speed*dt)
+		player.body:applyForce(0,-100)
 	end
 
 	if love.keyboard.isDown('down', 's') then
-		player.y = player.y + (player.speed*dt)
 		player.body:applyForce(0,100)
 	end
 
