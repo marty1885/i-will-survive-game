@@ -9,32 +9,48 @@ require "Player"
 require "Viewport"
 require "Weapon"
 require "Camera"
+require "Mob"
 
 player = nil
 sprite = nil
 camera = nil
+mob = nil
 
+players = {}
+mobs = {}
 
 function love.load()
 	map = Map()
 	sprite = Object()
 	sprite:loadImage("data/grass.png")
 	player = Player()
-
-	world = love.physics.newWorld(0,0,true)
-
 	player.x = 200
 	player.y = 200
-
-	player.width = 64
-	player.height = 64
-
 	sprite.x = 400
 	sprite.y = 500
-	sprite:enablePhysics("s",true)
-	player:enablePhysics("p",false)
-
 	camera = Camera()
+	player:loadImage("data/octocat.png")
+	mob = Mob()
+	mob:loadImage("data/free-bsd-32.png")
+
+	-- Create World
+	world = love.physics.newWorld(0, 0, true)
+	world:setCallbacks(beginContact, endContact, preSolve, postSolve)
+
+	-- Create Player
+	player:setCoordinate(400, 400)
+	player:setSize(64, 64)
+	players[player:enablePhysics(Object_Types.Player, false)] = player
+
+	-- Create Map
+	sprite:setCoordinate(400, 500)
+	sprite:enablePhysics(Object_Types.Object, true)
+
+	-- Create Mob
+	mob:setCoordinate(400, 300)
+	mob:setSize(32, 32)
+	mobs[mob:enablePhysics(Object_Types.Mob, true)] = mob
+
 end
 
 function love.update(dt)
@@ -63,6 +79,7 @@ function love.update(dt)
 
 	player:updateCoordinate()
 	sprite:updateCoordinate()
+	mob:updateCoordinate()
 end
 
 function love.draw(dt)
@@ -70,10 +87,46 @@ function love.draw(dt)
 	camera:apply()
 
 	love.graphics.draw(sprite.img, sprite.x, sprite.y)
-
+	love.graphics.draw(mob.img, mob.x, mob.y)
 	if camera:intersects(player) then
 		love.graphics.draw(player.img, player.x, player.y)
 	end
 	camera:deapply()
 	love.graphics.print("FPS = " ..love.timer.getFPS(), 0, 0)
+end
+
+function beginContact(a, b, coll)
+	if a:getUserData() ~= b:getUserData() then
+		local player_fixture = nil
+		local collide_fixture = nil
+		if a:getUserData() == Object_Types.Player then
+			player_fixture = a
+			collide_fixture = b
+		elseif b:getUserData() == Object_Types.Player then
+			player_fixture = b
+			collide_fixture = a
+		end
+
+		local collide_user_data = collide_fixture:getUserData()
+		if collide_user_data == Object_Types.Object then
+			-- do nothing
+		elseif collide_user_data == Object_Types.Weapon then
+			-- Get weapon
+		elseif collide_user_data == Object_Types.Mob then
+			players[player_fixture]:attacked(mobs[collide_fixture].attack_point)
+			print(players[player_fixture].hit_point)
+		end
+	end
+end
+
+function endContact(a, b, coll)
+
+end
+
+function preSolve(a, b, coll)
+
+end
+
+function postSolve(a, b, coll, normalimpulse1, tangentimpulse1, normalimpulse2, tangentimpulse2)
+
 end
