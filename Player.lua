@@ -12,9 +12,14 @@ setmetatable(Player, {
   end,
 })
 
-function Player:_init()
+function Player:initPlayer()
+	self:initObject()
 	self.x = 200
 	self.y = 200
 	self.speed = 200
 	self.img = love.graphics.newImage("data/octocat.png")
+end
+
+function Player:_init()
+	self:initPlayer()
 end

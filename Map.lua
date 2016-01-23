@@ -1,4 +1,4 @@
-require "Object"
+require "Sprite"
 
 Map = {}
 Map.__index = Map
@@ -19,7 +19,7 @@ function Map:_init()
 	for i=1,self.width do
 		self.map[i] = {}
 		for j=1,self.height do
-			self.map[i][j] = Object()
+			self.map[i][j] = Sprite()
 		end
 	end
 end
