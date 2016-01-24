@@ -12,5 +12,11 @@ setmetatable(Item, {
   end,
 })
 
-function Player:_init()
+function Item:initItem(path)
+	self:initObject(path)
+	self.hit_point = 100
+end
+
+function Item:_init(path)
+	self:initItem(path)
 end

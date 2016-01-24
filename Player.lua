@@ -19,6 +19,7 @@ function Player:initPlayer(path)
 	self.speed = 200
 	self.hit_point = 100
 	self.attack_point = 2
+	self.items = {}
 end
 
 function Player:_init(path)
@@ -32,4 +33,12 @@ function Player:attacked(attack_point)
 	else
 		return true
 	end
+end
+
+function Player:receiveItem(item)
+	table.insert(self.items, item)
+end
+
+function Player:getItems()
+	return self.items
 end
