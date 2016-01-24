@@ -19,21 +19,38 @@ Object_Types = {
 }
 
 function Object:loadImage(path)
-	self.img = love.graphics.newImage(path)
+	if path == "" then
+		return
+	end
+
+	local image = love.graphics.newImage(path)
+	if image == nil then
+		print("Failed to lode image :" .. path)
+	else
+		self.img = image
+		self.width = self.img:getWidth()
+		self.height = self.img:getHeight()
+	end
+end
+
+function Object:setImage(img)
+	self.img = img
 	self.width = self.img:getWidth()
 	self.height = self.img:getHeight()
 end
 
-function Object:initObject()
+function Object:initObject(path)
 	self.x = 1
 	self.y = 1
 	self.speed = 0
+	self.direction = 0;
 	self.width = 32
 	self.height = 32
+	self:loadImage(path)
 end
 
-function Object:_init()
-	self:initObject()
+function Object:_init(path)
+	self:initObject(path)
 end
 
 function Object:enablePhysics(id, isStatic)

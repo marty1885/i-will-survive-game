@@ -12,15 +12,15 @@ setmetatable(Mob, {
   end,
 })
 
-function Mob:initMob()
+function Mob:initMob(path)
+	self:initPlayer(path)
 	self.x = 200
 	self.y = 200
 	self.speed = 200
 	self.hit_point = 20
 	self.attack_point = 2
-	self.img = nil	
 end
 
-function Mob:_init()
-	self:initMob()
+function Mob:_init(path)
+	self:initMob(path)
 end

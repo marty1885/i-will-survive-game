@@ -10,11 +10,13 @@ require "Weapon"
 require "Camera"
 require "Mob"
 require "Bullet"
+require "Scene"
 
 player = nil
 sprite = nil
 camera = nil
 mob = nil
+scene = nil
 
 -- Hash table for referencing from fixture
 players = {}
@@ -22,13 +24,20 @@ mobs = {}
 bullets = {}
 
 canShoot = true
-canShootTimerMax = 0.5
+canShootTimerMax = 0.1
 canShootTimer = canShootTimerMax
+
+local function mod(a,b)
+	return  a - math.floor(a/b)*b
+end
+
+local function clamp(n,min,max)
+	return math.min(math.max(n,min),max)
+end
 
 function love.load()
 	--map = Map()
-	sprite = Object()
-	sprite:loadImage("data/grass.png")
+	sprite = Object("data/grass.png")
 	camera = Camera()
 
 	-- Create World
@@ -36,8 +45,7 @@ function love.load()
 	world:setCallbacks(beginContact, endContact, preSolve, postSolve)
 
 	-- Create Player
-	player = Player()
-	player:loadImage("data/octocat.png")
+	player = Player("data/octocat.png")
 	player:setCoordinate(400, 400)
 	player:setSize(64, 64)
 	players[player:enablePhysics(Object_Types.Player, false)] = player
@@ -47,19 +55,32 @@ function love.load()
 	--sprite:enablePhysics(Object_Types.Object, true)
 
 	-- Create Mob
-	mob = Mob()
-	mob:loadImage("data/free-bsd-32.png")
+	mob = Mob("data/free-bsd-32.png")
 	mob:setCoordinate(400, 300)
 	mob:setSize(32, 32)
 	mobs[mob:enablePhysics(Object_Types.Mob, true)] = mob
+
+	-- create scene
+	scene = Scene()
+	scene:loadWallImage("data/stone.png")
+
+	local width = 64
+	local height = 64
+	for i=0, height do
+		scene:addWall(0,i)
+		scene:addWall(width,i)
+	end
+
+	for i=0, width do
+		scene:addWall(i,0)
+		scene:addWall(i,height)
+	end
 end
 
-local function mod(a,b)
-	return  a - math.floor(a/b)*b
-end
-
-local function clamp(n,min,max)
-	return math.min(math.max(n,min),max)
+function updateHashmap(map)
+	for fixture, obj in pairs(map) do
+		obj:updateCoordinate()
+	end
 end
 
 function love.update(dt)
@@ -99,36 +120,48 @@ function love.update(dt)
 	if canShootTimer < 0 then
 		canShoot = true
 	end
-	if love.keyboard.isDown('lctrl') and canShoot then
-		new_bullet = Bullet()
-		new_bullet:loadImage("data/bullet_2_blue.png")
-		new_bullet:setCoordinate(player.body:getX(), player.body:getY() - player.height)
+	if love.mouse.isDown(1) and canShoot then
+
+		local mouseX,mouseY = love.mouse.getPosition()
+		local relativeX = mouseX - player.body:getX() - camera.offsetX
+		local relativeY = mouseY - player.body:getY() - camera.offsetY
+		local length = math.sqrt(relativeX*relativeX + relativeY*relativeY)
+		normalX = relativeX / length
+		normalY = relativeY / length
+		bulletXCoord = normalX * player.width
+		bulletYCoord = normalY * player.height
+
+		new_bullet = Bullet("data/bullet_2_blue.png")
+		new_bullet:setCoordinate(player.body:getX() + bulletXCoord, player.body:getY() + bulletYCoord)
 		new_bullet:setSize(10, 26)
 		bullets[new_bullet:enablePhysics(Object_Types.Bullet, false)] = new_bullet
-		new_bullet.body:applyForce(0, -1000)
+		new_bullet.body:applyForce(10000*normalX, 10000*normalY)
+		new_bullet.direction = math.atan2(normalX,normalY)
+		new_bullet.body:setAngle(math.atan2(normalX,normalY))
 		canShoot = false
 		canShootTimer = canShootTimerMax
 	end
 
 	player:updateCoordinate()
-	for fixture, mob in pairs(mobs) do
-		mob:updateCoordinate()
-	end
+
+	updateHashmap(mobs)
 	-- update the positions of bullets
-	for fixture, bullet in pairs(bullets) do
-		bullet:updateCoordinate()
-		if bullet.y < 0 then -- remove bullets when they pass off the screen
-			bullets[fixture] = nil
-			fixture:getBody():destroy()
-		end
+	updateHashmap(bullets)
+end
+
+function drawHashmap(map)
+	for fixture, obj in pairs(map) do
+		love.graphics.draw(obj.img, obj.x, obj.y,-obj.direction)
 	end
 end
 
-function love.draw(dt)
-	camera:centerOn(player)
-	camera:apply()
+function drawAllHashmap()
+	drawHashmap(mobs)
+	-- Draw Bullets
+	drawHashmap(bullets)
+end
 
-
+function darwBackground()
 	local x,y = camera:getTopRight()
 	local w,h = camera:getSize()
 	x = x - camera.offsetX
@@ -147,22 +180,18 @@ function love.draw(dt)
 		end
 		yCoord = yCoord + spriteHeight
 	end
+end
 
-	if camera:intersects(player) then
-		love.graphics.draw(player.img, player.x, player.y)
-	end
+function love.draw(dt)
+	camera:centerOn(player)
+	camera:apply()
 
-	for fixture, mob in pairs(mobs) do
-		love.graphics.draw(mob.img, mob.x, mob.y)
-	end
-
-	-- Draw Bullets
-	for fixture, bullet in pairs(bullets) do
-		love.graphics.draw(bullet.img, bullet.x, bullet.y)
-	end
-
+	darwBackground()
+	scene:drawAll(camera)
+	-- darw player
+	love.graphics.draw(player.img, player.x, player.y)
+	drawAllHashmap()
 	camera:deapply()
-
 
 	-- Debug information
 	love.graphics.print("FPS = " ..love.timer.getFPS(), 0, 0)

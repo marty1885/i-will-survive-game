@@ -9,11 +9,10 @@ setmetatable(Bullet, {
     local self = setmetatable({}, cls)
     self:_init(...)
     return self
-  end,
-					 })
+  end,})
 
-function Bullet:initBullet()
-	self:initObject()
+function Bullet:initBullet(path)
+	self:initObject(path)
 	self.x = 200
 	self.y = 200
 	self.speed = 200
@@ -21,6 +20,6 @@ function Bullet:initBullet()
 	self.attack_point = 10
 end
 
-function Bullet:_init()
-	self:initBullet()
+function Bullet:_init(path)
+	self:initBullet(path)
 end

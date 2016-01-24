@@ -12,8 +12,8 @@ setmetatable(Player, {
   end,
 })
 
-function Player:initPlayer()
-	self:initObject()
+function Player:initPlayer(path)
+	self:initObject(path)
 	self.x = 200
 	self.y = 200
 	self.speed = 200
@@ -21,8 +21,8 @@ function Player:initPlayer()
 	self.attack_point = 2
 end
 
-function Player:_init()
-	self:initPlayer()
+function Player:_init(path)
+	self:initPlayer(path)
 end
 
 function Player:attacked(attack_point)
