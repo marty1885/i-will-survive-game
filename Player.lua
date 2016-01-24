@@ -30,23 +30,6 @@ function Player:loadQuad(path0,path1,path2,path3)
 	self.quadImage[3] = Object(path3).img
 end
 
-function Player:update()
-	vx,vy = self.body:getLinearVelocity()
-	if vx > vy then
-		if vx > 0 then
-			self.img = self.quadImage[3]
-		else
-			self.img = self.quadImage[2]
-		end
-	else
-		if vy > 0 then
-			self.img = self.quadImage[0]
-		else
-			self.img = self.quadImage[1]
-		end
-	end
-end
-
 function Player:_init(path)
 	self:initPlayer(path)
 end
