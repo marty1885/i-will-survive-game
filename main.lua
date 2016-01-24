@@ -19,6 +19,8 @@ camera = nil
 scene = nil
 bulletImage = nil
 bulletSound = nil
+shader = nil
+canvas = nil
 
 -- Hash table for referencing from fixture
 players = {}
@@ -60,6 +62,33 @@ function love.load()
 	-- Create Map
 	sprite:setCoordinate(400, 500)
 	--sprite:enablePhysics(Object_Types.Object, true)
+
+	canvas = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight())
+
+	shader = love.graphics.newShader[[
+	extern vec2 size = vec2(1200,800);
+	extern int samples = 5; // pixels per axis; higher = bigger glow, worse performance
+	extern float quality = 100; // lower = smaller glow, better quality
+
+	vec4 effect(vec4 colour, Image tex, vec2 tc, vec2 sc)
+	{
+		vec4 source = Texel(tex, tc);
+		vec4 sum = vec4(0);
+		int diff = (samples - 1) / 2;
+		vec2 sizeFactor = vec2(1) / size * quality;
+
+		for (int x = -diff; x <= diff; x++)
+		{
+			for (int y = -diff; y <= diff; y++)
+			{
+				vec2 offset = vec2(x, y) * sizeFactor;
+				sum += Texel(tex, tc + offset);
+			}
+		}
+
+		return ((sum / (samples * samples)) + source) * colour;
+	}
+	]]
 
 
 	bulletImage = love.graphics.newImage("data/bullet_2_blue.png")
@@ -194,15 +223,26 @@ function darwBackground()
 end
 
 function love.draw(dt)
+
 	camera:centerOn(player)
 	camera:apply()
+
+	love.graphics.setShader(shader)
+	love.graphics.setCanvas(canvas)
+		love.graphics.clear()
+		drawAllHashmap()
+	love.graphics.setCanvas()
+	love.graphics.setShader()
+
 
 	darwBackground()
 	scene:drawAll(camera)
 	-- darw player
 	love.graphics.draw(player.img, player.x, player.y)
-	drawAllHashmap()
+	--drawHashmap(mobs)
+
 	camera:deapply()
+	love.graphics.draw(canvas)
 
 	-- Debug information
 	love.graphics.print("FPS = " ..love.timer.getFPS(), 0, 0)
