@@ -64,7 +64,7 @@ end
 
 function Scene:drawAll()
 	for i, obj in ipairs(self.scene) do
-		love.graphics.draw(self.wallImage, obj.x-self.wallImage:getWidth()/2, obj.y-self.wallImage:getHeight()/2)
+		love.graphics.draw(obj.img, obj.x-obj.img:getWidth()/2, obj.y-obj.img:getHeight()/2)
 	end
 end
 

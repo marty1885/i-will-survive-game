@@ -64,7 +64,7 @@ function Object:enablePhysics(id, isStatic)
 	self.body = love.physics.newBody(world, self.x, self.y, type)
 	self.shape = love.physics.newRectangleShape(self.width, self.height)
 	self.fixture = love.physics.newFixture(self.body, self.shape)
-	self.fixture:setRestitution(0.5)
+	self.fixture:setRestitution(0.18)
 	self.fixture:setUserData(id)
 	return self.fixture
 end

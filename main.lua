@@ -22,6 +22,9 @@ bulletImage = nil
 bulletSound = nil
 shader = nil
 canvas = nil
+bgm = nil
+deathSound = nil
+godMode = false
 
 -- Hash table for referencing from fixture
 players = {}
@@ -53,7 +56,7 @@ end
 
 function love.load()
 	--map = Map()
-	sprite = Object("data/grass.png")
+	sprite = Object("data/stone.png")
 	camera = Camera()
 
 	-- Create World
@@ -67,8 +70,9 @@ function love.load()
 
 	-- Create Player
 	player = Player("data/ro.png")
+	player:loadQuad("data/ro0.png","data/ro1.png","data/ro2.png","data/ro3.png")
 	player:setCoordinate(scene.width / 2 * 32, scene.height / 2 * 32)
-	-- player:setSize(64, 64)
+	-- player:setSize(32, 32)
 	players[player:enablePhysics(Object_Types.Player, false)] = player
 
 	-- Create Map
@@ -78,27 +82,13 @@ function love.load()
 	canvas = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight())
 
 	shader = love.graphics.newShader[[
-	extern vec2 size = vec2(1200,800);
-	extern int samples = 5; // pixels per axis; higher = bigger glow, worse performance
-	extern float quality = 100; // lower = smaller glow, better quality
 
 	vec4 effect(vec4 colour, Image tex, vec2 tc, vec2 sc)
 	{
-		vec4 source = Texel(tex, tc);
-		vec4 sum = vec4(0);
-		int diff = (samples - 1) / 2;
-		vec2 sizeFactor = vec2(1) / size * quality;
+		vec3 col = Texel(tex, tc).xyz;
+		col *= smoothstep(1,0,length(vec2(0.5,0.5)-tc))*smoothstep(1,0,length(vec2(0.5,0.5)-tc));
 
-		for (int x = -diff; x <= diff; x++)
-		{
-			for (int y = -diff; y <= diff; y++)
-			{
-				vec2 offset = vec2(x, y) * sizeFactor;
-				sum += Texel(tex, tc + offset);
-			}
-		}
-
-		return ((sum / (samples * samples)) + source) * colour;
+		return vec4(col,1);
 	}
 	]]
 
@@ -106,14 +96,40 @@ function love.load()
 	bulletImage = love.graphics.newImage("data/bullet_2_blue.png")
 	bulletSound = love.audio.newSource("data/bullet.wav")
 
+	bgm = love.audio.newSource("data/BGM.mp3")
+	deathSound = love.audio.newSource("data/kill.wav")
+	love.audio.play(bgm)
+
 	-- Initialize Mobs
 	math.randomseed(os.time())
 
-	-- Create Items
-	item = Item("data/chest.png")
-	item:setCoordinate(player.x - 100, player.y)
-	item:setSize(32, 32)
-	items[item:enablePhysics(Object_Types.Item, true)] = item
+	-- Create Trees
+	scene_width, scene_height = scene:getSize()
+	local width_offset = scene_width / grid_divisor
+	local height_offset = scene_height / grid_divisor
+
+	local total_num_trees = 180
+	for i = 1, total_num_trees do
+		local i = math.random(0, grid_divisor - 1)
+		local j = math.random(0, grid_divisor - 1)
+		local tree_start_x = scene_width / 2 - width_offset * 0.5 * (grid_divisor - 1)
+		local tree_start_y = scene_height / 2 - height_offset * 0.5 * (grid_divisor - 1)
+		tree = nil
+		if math.random(2) == 1 then
+			tree = Item('data/Tree1.png')
+		else
+			tree = Item('data/Tree2.png')
+		end
+		tree:setCoordinate(tree_start_x + i * width_offset + width_offset / 2 * (math.random() - 0.5),
+		 			tree_start_y + j * height_offset + height_offset / 2 * (math.random() - 0.5))
+
+		scene:addObject(tree, Object_Types.Item)
+	end
+
+	--item = Item("data/chest.png")
+	--item:setCoordinate(player.x - 100, player.y)
+	--item:setSize(32, 32)
+	--items[item:enablePhysics(Object_Types.Item, true)] = item
 end
 
 
@@ -133,7 +149,33 @@ function love.update(dt)
 		clamp(vy,-maxVelosity,maxVelosity))
 	vx,vy = player.body:getLinearVelocity()
 
-	local force = 1000
+
+
+	local friction = 2
+	local sx = 1*friction
+	local sy = 1*friction
+	if vx < 0 then
+		sx = -1*friction
+	end
+
+	if vy < 0 then
+		sy = -1*friction
+	end
+	-- friction
+	vax = vx - sx
+	vay = vy - sy
+	if(vax*vx <= 0) then
+		vax = 0
+	end
+
+	if(vay*vy <= 0) then
+		vay = 0
+	end
+
+	player.body:setLinearVelocity(vax,vay)
+
+
+	local force = 3000
 	-- I always start with an easy way to exit the game
 	if love.keyboard.isDown('escape') then
 		love.event.push('quit')
@@ -153,6 +195,27 @@ function love.update(dt)
 
 	if love.keyboard.isDown('down', 's') then
 		player.body:applyForce(0,force)
+	end
+
+	if love.keyboard.isDown('[') then
+		mob_speed = mob_speed - 5
+	end
+
+	if love.keyboard.isDown(']') then
+		mob_speed = mob_speed + 5
+	end
+
+	if love.keyboard.isDown('9') then
+		canShootTimerMax = canShootTimerMax + 0.01
+	end
+
+	if love.keyboard.isDown('0') then
+		canShootTimerMax = canShootTimerMax - 0.01
+	end
+
+	if love.keyboard.isDown('g') then
+		player.hit_point = 10000
+		godMode = true
 	end
 
 	-- Bullet
@@ -180,7 +243,7 @@ function love.update(dt)
 		new_bullet.body:setAngle(math.atan2(normalX,normalY))
 		canShoot = false
 		canShootTimer = canShootTimerMax
-		--love.audio.play(bulletSound)
+		love.audio.play(bulletSound)
 	end
 
 	-- Create Mob
@@ -194,12 +257,25 @@ function love.update(dt)
 	if mobs_total_count < MAX_MOBS_COUNT and canMobRespawn then
 		local i = math.random(0, grid_divisor - 1)
 		local j = math.random(0, grid_divisor - 1)
-		local mob = Mob("data/free-bsd-32.png")
+		local mob = nil
+		local random_num = math.random(3)
+		if random_num == 1 then
+			mob = Mob("data/slime0.png")
+			mob.hit_point = 30
+		elseif random_num == 2 then
+			mob = Mob("data/slime1.png")
+			mob.hit_point = 40
+		elseif random_num == 3 then
+			mob = Mob("data/slime2.png")
+			mob.hit_point = 50
+		end
+
 		mob:setCoordinate(mob_start_x + i * width_offset + width_offset / 2 * (math.random() - 0.5),
 						  mob_start_y + j * height_offset + height_offset / 2 * (math.random() - 0.5))
-		mob:setSize(32, 32)
+		-- mob:setSize(32, 32)
 		mobs[mob:enablePhysics(Object_Types.Mob, false)] = mob
 		mobs_total_count = mobs_total_count + 1
+		MAX_MOBS_COUNT = MAX_MOBS_COUNT + 1
 		canMobRespawn = false
 		canMobRespawnTimer = canMobRespawnTimerMax
 	end
@@ -218,6 +294,8 @@ function love.update(dt)
 	-- update the positions of bullets
 	updateHashmap(bullets)
 	updateHashmap(items)
+
+	player:update()
 end
 
 function drawHashmap(map)
@@ -258,28 +336,30 @@ function love.draw(dt)
 	camera:centerOn(player)
 	camera:apply()
 
-	love.graphics.setShader(shader)
+
 	love.graphics.setCanvas(canvas)
 		love.graphics.clear()
+		darwBackground()
+		love.graphics.draw(player.img, player.x, player.y)
 		drawAllHashmap()
+		scene:drawAll(camera)
 	love.graphics.setCanvas()
-	love.graphics.setShader()
+	love.graphics.setShader(shader)
 
-
-	darwBackground()
-	scene:drawAll(camera)
 	-- darw player
-	love.graphics.draw(player.img, player.x, player.y)
 	--drawHashmap(mobs)
 
 	camera:deapply()
 	love.graphics.draw(canvas)
+
+	love.graphics.setShader()
 
 	-- Debug information
 	love.graphics.print("FPS = " ..love.timer.getFPS(), 0, 0)
 	love.graphics.print("HP = " ..player.hit_point, 0, 12)
 	love.graphics.print("Kill Count = " ..player_kill_count, 0, 24)
 	love.graphics.print("Player Item count = " ..table.getn(player:getItems()), 0, 36)
+	love.graphics.print("PS : Lua sucks for writing an entire game engine. LOL", 0, 60)
 end
 
 function beginContact(a, b, coll)
@@ -317,13 +397,15 @@ function beginContact(a, b, coll)
 			elseif collide_user_data == Object_Types.Weapon then
 				-- Get weapon
 			elseif collide_user_data == Object_Types.Item then
-				player:receiveItem(items[collide_fixture])
-				items[collide_fixture] = nil
-				collide_fixture:getBody():destroy()
+				--player:receiveItem(items[collide_fixture])
+				--items[collide_fixture] = nil
+				--collide_fixture:getBody():destroy()
 			elseif collide_user_data == Object_Types.Mob then
 				if mobs[collide_fixture] ~= nil and
 				not players[player_fixture]:attacked(mobs[collide_fixture].attack_point) then
-					print("You are dead")
+					if not godMode then
+						love.event.push('quit')
+					end
 				end
 			end
 		end
@@ -336,10 +418,13 @@ function beginContact(a, b, coll)
 					collide_fixture:getBody():destroy()
 					mobs_total_count = mobs_total_count - 1
 					player_kill_count = player_kill_count + 1
+					--love.audio.play(deathSound)
 				end
 			end
-			bullets[bullet_fixture] = nil
-			bullet_fixture:getBody():destroy()
+			if collide_user_data ~= Object_Types.Bullet then
+				bullets[bullet_fixture] = nil
+				bullet_fixture:getBody():destroy()
+			end
 		end
 
 		-- Mob Collision
