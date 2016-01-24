@@ -15,8 +15,10 @@ require "Scene"
 player = nil
 sprite = nil
 camera = nil
-mob = nil
+--mob = nil
 scene = nil
+bulletImage = nil
+bulletSound = nil
 
 -- Hash table for referencing from fixture
 players = {}
@@ -46,7 +48,7 @@ function love.load()
 
 	-- Create Player
 	player = Player("data/octocat.png")
-	player:setCoordinate(400, 400)
+	player:setCoordinate(320, 320)
 	player:setSize(64, 64)
 	players[player:enablePhysics(Object_Types.Player, false)] = player
 
@@ -55,15 +57,14 @@ function love.load()
 	--sprite:enablePhysics(Object_Types.Object, true)
 
 	-- Create Mob
-	mob = Mob("data/free-bsd-32.png")
-	mob:setCoordinate(400, 300)
-	mob:setSize(32, 32)
-	mobs[mob:enablePhysics(Object_Types.Mob, true)] = mob
 
 	-- create scene
 	scene = Scene()
 	scene:loadWallImage("data/stone.png")
 	scene:createBorder(20,20)
+
+	bulletImage = love.graphics.newImage("data/bullet_2_blue.png")
+	bulletSound = love.audio.newSource("data/bullet.wav")
 end
 
 
@@ -120,7 +121,8 @@ function love.update(dt)
 		bulletXCoord = normalX * player.width
 		bulletYCoord = normalY * player.height
 
-		new_bullet = Bullet("data/bullet_2_blue.png")
+		new_bullet = Bullet("")
+		new_bullet:setImage(bulletImage)
 		new_bullet:setCoordinate(player.body:getX() + bulletXCoord, player.body:getY() + bulletYCoord)
 		new_bullet:setSize(10, 26)
 		bullets[new_bullet:enablePhysics(Object_Types.Bullet, false)] = new_bullet
@@ -129,6 +131,7 @@ function love.update(dt)
 		new_bullet.body:setAngle(math.atan2(normalX,normalY))
 		canShoot = false
 		canShootTimer = canShootTimerMax
+		love.audio.play(bulletSound)
 	end
 
 	player:updateCoordinate()
@@ -217,7 +220,9 @@ function beginContact(a, b, coll)
 			elseif collide_user_data == Object_Types.Weapon then
 				-- Get weapon
 			elseif collide_user_data == Object_Types.Mob then
-				players[player_fixture]:attacked(mobs[collide_fixture].attack_point)
+				if players[player_fixture]:attacked(mobs[collide_fixture].attack_point) then
+					print("You are dead")
+				end
 			end
 		end
 
