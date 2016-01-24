@@ -53,12 +53,13 @@ function love.load()
 	-- create scene
 	scene = Scene()
 	scene:loadWallImage("data/stone.png")
-	scene:createBorder(32,32)
+	scene:createBorder(128,128)
 
 	-- Create Player
-	player = Player("data/octocat.png")
+	player = Player("data/ro.png")
+	player:loadQuad("data/ro0.png","data/ro3.png","data/ro3.png","data/ro3.png")
 	player:setCoordinate(scene.width / 2 * 32, scene.height / 2 * 32)
-	player:setSize(64, 64)
+	-- player:setSize(64, 64)
 	players[player:enablePhysics(Object_Types.Player, false)] = player
 
 	-- Create Map
@@ -190,7 +191,7 @@ function love.update(dt)
 
 	player:updateCoordinate()
 
-	local mob_speed = 25
+	local mob_speed = 100
 	for fixture, mob in pairs(mobs) do
 		local relative_x = player.body:getX() - mob.body:getX()
 		local relative_y = player.body:getY() - mob.body:getY()
@@ -203,6 +204,8 @@ function love.update(dt)
 	-- update the positions of bullets
 	updateHashmap(bullets)
 	updateHashmap(items)
+
+	player:update()
 end
 
 function drawHashmap(map)
@@ -264,7 +267,7 @@ function love.draw(dt)
 	love.graphics.print("FPS = " ..love.timer.getFPS(), 0, 0)
 	love.graphics.print("HP = " ..player.hit_point, 0, 12)
 	love.graphics.print("Player Item count = " ..table.getn(player:getItems()), 0, 24)
-	
+
 end
 
 function beginContact(a, b, coll)
@@ -326,7 +329,7 @@ function beginContact(a, b, coll)
 
 		-- Mob Collision
 		if mob_fixture ~= nil then
-			
+
 		end
 	end
 end

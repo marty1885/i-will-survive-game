@@ -44,6 +44,12 @@ function Scene:createBorder(width, height)
 	end
 end
 
+function Scene:addObject(obj, type)
+	local size = table.getn(self.scene)
+	self.scene[size+1] = obj
+	return self.scene[size+1]:enablePhysics(type, true)
+end
+
 function Scene:addWall(x, y)
 	local size = table.getn(self.scene)
 	self.scene[size+1] = Object("")

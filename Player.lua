@@ -20,6 +20,31 @@ function Player:initPlayer(path)
 	self.hit_point = 100
 	self.attack_point = 2
 	self.items = {}
+	self.quadImage = {}
+end
+
+function Player:loadQuad(path0,path1,path2,path3)
+	self.quadImage[0] = Object(path0).img
+	self.quadImage[1] = Object(path1).img
+	self.quadImage[2] = Object(path2).img
+	self.quadImage[3] = Object(path3).img
+end
+
+function Player:update()
+	vx,vy = self.body:getLinearVelocity()
+	if vx > vy then
+		if vx > 0 then
+			self.img = self.quadImage[3]
+		else
+			self.img = self.quadImage[2]
+		end
+	else
+		if vy > 0 then
+			self.img = self.quadImage[0]
+		else
+			self.img = self.quadImage[1]
+		end
+	end
 end
 
 function Player:_init(path)
