@@ -63,19 +63,9 @@ function love.load()
 	-- create scene
 	scene = Scene()
 	scene:loadWallImage("data/stone.png")
-
-	local width = 64
-	local height = 64
-	for i=0, height do
-		scene:addWall(0,i)
-		scene:addWall(width,i)
-	end
-
-	for i=0, width do
-		scene:addWall(i,0)
-		scene:addWall(i,height)
-	end
+	scene:createBorder(20,20)
 end
+
 
 function updateHashmap(map)
 	for fixture, obj in pairs(map) do
@@ -121,7 +111,6 @@ function love.update(dt)
 		canShoot = true
 	end
 	if love.mouse.isDown(1) and canShoot then
-
 		local mouseX,mouseY = love.mouse.getPosition()
 		local relativeX = mouseX - player.body:getX() - camera.offsetX
 		local relativeY = mouseY - player.body:getY() - camera.offsetY
