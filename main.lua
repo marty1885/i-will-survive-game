@@ -11,6 +11,7 @@ require "Camera"
 require "Mob"
 require "Bullet"
 require "Scene"
+require "Item"
 
 player = nil
 sprite = nil
@@ -24,6 +25,7 @@ bulletSound = nil
 players = {}
 mobs = {}
 bullets = {}
+items = {}
 
 canShoot = true
 canShootTimerMax = 0.15
@@ -53,7 +55,7 @@ function love.load()
 
 	-- Create Player
 	player = Player("data/octocat.png")
-	player:setCoordinate(16*32, 16*32)
+	player:setCoordinate(scene.width / 2 * 32, scene.height / 2 * 32)
 	player:setSize(64, 64)
 	players[player:enablePhysics(Object_Types.Player, false)] = player
 
@@ -68,22 +70,26 @@ function love.load()
 	-- Create Mob
 	math.randomseed(os.time())
 	scene_width, scene_height = scene:getSize()
-	local grid_divisor = 7
+	local grid_divisor = 4
 	local width_offset = scene_width / grid_divisor
 	local height_offset = scene_height / grid_divisor
 	local mob_start_x = player.x - width_offset * 0.5 * (grid_divisor - 1)
 	local mob_start_y = player.y - height_offset * 0.5 * (grid_divisor - 1)
-	print(width_offset, height_offset)
-	print(mob_start_x, mob_start_y)
 	for i = 0, grid_divisor - 1 do
 		for j = 0, grid_divisor - 1 do
 			local mob = Mob("data/free-bsd-32.png")
 			mob:setCoordinate(mob_start_x + i * width_offset + width_offset / 2 * (math.random() - 0.5),
 							  mob_start_y + j * height_offset + height_offset / 2 * (math.random() - 0.5))
 			mob:setSize(32, 32)
-			mobs[mob:enablePhysics(Object_Types.Mob, true)] = mob
+			mobs[mob:enablePhysics(Object_Types.Mob, false)] = mob
 		end
 	end
+
+	-- Create Items
+	item = Item("data/chest.png")
+	item:setCoordinate(player.x - 100, player.y)
+	item:setSize(32, 32)
+	items[item:enablePhysics(Object_Types.Item, true)] = item
 end
 
 
@@ -155,9 +161,19 @@ function love.update(dt)
 
 	player:updateCoordinate()
 
-	updateHashmap(mobs)
+	local mob_speed = 25
+	for fixture, mob in pairs(mobs) do
+		local relative_x = player.body:getX() - mob.body:getX()
+		local relative_y = player.body:getY() - mob.body:getY()
+		local length = math.sqrt(math.pow(relative_x, 2) + math.pow(relative_y, 2))
+		local normal_x = relative_x / length
+		local normal_y = relative_y / length
+		mob.body:setLinearVelocity(mob_speed * normal_x, mob_speed * normal_y)
+		mob:updateCoordinate()
+	end
 	-- update the positions of bullets
 	updateHashmap(bullets)
+	updateHashmap(items)
 end
 
 function drawHashmap(map)
@@ -168,8 +184,8 @@ end
 
 function drawAllHashmap()
 	drawHashmap(mobs)
-	-- Draw Bullets
 	drawHashmap(bullets)
+	drawHashmap(items)
 end
 
 function darwBackground()
@@ -207,6 +223,8 @@ function love.draw(dt)
 	-- Debug information
 	love.graphics.print("FPS = " ..love.timer.getFPS(), 0, 0)
 	love.graphics.print("HP = " ..player.hit_point, 0, 12)
+	love.graphics.print("Player Item count = " ..table.getn(player:getItems()), 0, 24)
+	
 end
 
 function beginContact(a, b, coll)
@@ -214,19 +232,24 @@ function beginContact(a, b, coll)
 		local player_fixture = nil
 		local collide_fixture = nil
 		local bullet_fixture = nil
+		local mob_fixture = nil
 		if a:getUserData() == Object_Types.Player then
 			player_fixture = a
 			collide_fixture = b
 		elseif b:getUserData() == Object_Types.Player then
 			player_fixture = b
 			collide_fixture = a
-		end
-
-		if a:getUserData() == Object_Types.Bullet then
+		elseif a:getUserData() == Object_Types.Bullet then
 			bullet_fixture = a
 			collide_fixture = b
 		elseif b:getUserData() == Object_Types.Bullet then
 			bullet_fixture = b
+			collide_fixture = a
+		elseif a:getUserData() == Object_Types.Mob then
+			mob_fixture = a
+			collide_fixture = b
+		elseif b:getUserData() == Object_Types.Mob then
+			mob_fixture = b
 			collide_fixture = a
 		end
 
@@ -238,6 +261,10 @@ function beginContact(a, b, coll)
 				-- do nothing
 			elseif collide_user_data == Object_Types.Weapon then
 				-- Get weapon
+			elseif collide_user_data == Object_Types.Item then
+				player:receiveItem(items[collide_fixture])
+				items[collide_fixture] = nil
+				collide_fixture:getBody():destroy()
 			elseif collide_user_data == Object_Types.Mob then
 				if not players[player_fixture]:attacked(mobs[collide_fixture].attack_point) then
 					print("You are dead")
@@ -255,6 +282,11 @@ function beginContact(a, b, coll)
 			end
 			bullets[bullet_fixture] = nil
 			bullet_fixture:getBody():destroy()
+		end
+
+		-- Mob Collision
+		if mob_fixture ~= nil then
+			
 		end
 	end
 end
