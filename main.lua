@@ -25,9 +25,18 @@ canvas = nil
 
 -- Hash table for referencing from fixture
 players = {}
+player_kill_count = 0
 mobs = {}
+grid_divisor = 10
+MAX_MOBS_COUNT = 50
+mobs_total_count = 0
+
 bullets = {}
 items = {}
+
+canMobRespawn = true
+canMobRespawnTimerMax = 0.5
+canMobRespawnTimer = canMobRespawnTimerMax
 
 canShoot = true
 canShootTimerMax = 0.15
@@ -96,24 +105,9 @@ function love.load()
 	bulletImage = love.graphics.newImage("data/bullet_2_blue.png")
 	bulletSound = love.audio.newSource("data/bullet.wav")
 
-	-- Create Mob
+	-- Initialize Mobs
 	math.randomseed(os.time())
-	scene_width, scene_height = scene:getSize()
-	local grid_divisor = 4
-	local width_offset = scene_width / grid_divisor
-	local height_offset = scene_height / grid_divisor
-	local mob_start_x = player.x - width_offset * 0.5 * (grid_divisor - 1)
-	local mob_start_y = player.y - height_offset * 0.5 * (grid_divisor - 1)
-	for i = 0, grid_divisor - 1 do
-		for j = 0, grid_divisor - 1 do
-			local mob = Mob("data/free-bsd-32.png")
-			mob:setCoordinate(mob_start_x + i * width_offset + width_offset / 2 * (math.random() - 0.5),
-							  mob_start_y + j * height_offset + height_offset / 2 * (math.random() - 0.5))
-			mob:setSize(32, 32)
-			mobs[mob:enablePhysics(Object_Types.Mob, false)] = mob
-		end
-	end
-
+	
 	-- Create Items
 	item = Item("data/chest.png")
 	item:setCoordinate(player.x - 100, player.y)
@@ -186,6 +180,27 @@ function love.update(dt)
 		canShoot = false
 		canShootTimer = canShootTimerMax
 		--love.audio.play(bulletSound)
+	end
+
+	-- Create Mob
+	canMobRespawnTimer = canMobRespawnTimer - (1 * dt)
+	if canMobRespawnTimer < 0 then canMobRespawn = true end
+	scene_width, scene_height = scene:getSize()
+	local width_offset = scene_width / grid_divisor
+	local height_offset = scene_height / grid_divisor
+	local mob_start_x = scene_width / 2 - width_offset * 0.5 * (grid_divisor - 1)
+	local mob_start_y = scene_height / 2 - height_offset * 0.5 * (grid_divisor - 1)
+	if mobs_total_count < MAX_MOBS_COUNT and canMobRespawn then
+		local i = math.random(0, grid_divisor - 1)
+		local j = math.random(0, grid_divisor - 1)
+		local mob = Mob("data/free-bsd-32.png")
+		mob:setCoordinate(mob_start_x + i * width_offset + width_offset / 2 * (math.random() - 0.5),
+						  mob_start_y + j * height_offset + height_offset / 2 * (math.random() - 0.5))
+		mob:setSize(32, 32)
+		mobs[mob:enablePhysics(Object_Types.Mob, false)] = mob
+		mobs_total_count = mobs_total_count + 1
+		canMobRespawn = false
+		canMobRespawnTimer = canMobRespawnTimerMax
 	end
 
 	player:updateCoordinate()
@@ -263,7 +278,8 @@ function love.draw(dt)
 	-- Debug information
 	love.graphics.print("FPS = " ..love.timer.getFPS(), 0, 0)
 	love.graphics.print("HP = " ..player.hit_point, 0, 12)
-	love.graphics.print("Player Item count = " ..table.getn(player:getItems()), 0, 24)
+	love.graphics.print("Kill Count = " ..player_kill_count, 0, 24)
+	love.graphics.print("Player Item count = " ..table.getn(player:getItems()), 0, 36)
 	
 end
 
@@ -306,7 +322,8 @@ function beginContact(a, b, coll)
 				items[collide_fixture] = nil
 				collide_fixture:getBody():destroy()
 			elseif collide_user_data == Object_Types.Mob then
-				if not players[player_fixture]:attacked(mobs[collide_fixture].attack_point) then
+				if collide_fixture ~= nil and
+				not players[player_fixture]:attacked(mobs[collide_fixture].attack_point) then
 					print("You are dead")
 				end
 			end
@@ -318,6 +335,8 @@ function beginContact(a, b, coll)
 				if not mobs[collide_fixture]:attacked(bullets[bullet_fixture].attack_point) then
 					mobs[collide_fixture] = nil
 					collide_fixture:getBody():destroy()
+					mobs_total_count = mobs_total_count - 1
+					player_kill_count = player_kill_count + 1
 				end
 			end
 			bullets[bullet_fixture] = nil
