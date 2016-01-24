@@ -26,7 +26,7 @@ mobs = {}
 bullets = {}
 
 canShoot = true
-canShootTimerMax = 0.1
+canShootTimerMax = 0.15
 canShootTimer = canShootTimerMax
 
 local function mod(a,b)
@@ -46,9 +46,14 @@ function love.load()
 	world = love.physics.newWorld(0, 0, true)
 	world:setCallbacks(beginContact, endContact, preSolve, postSolve)
 
+	-- create scene
+	scene = Scene()
+	scene:loadWallImage("data/stone.png")
+	scene:createBorder(32,32)
+
 	-- Create Player
 	player = Player("data/octocat.png")
-	player:setCoordinate(320, 320)
+	player:setCoordinate(16*32, 16*32)
 	player:setSize(64, 64)
 	players[player:enablePhysics(Object_Types.Player, false)] = player
 
@@ -56,15 +61,29 @@ function love.load()
 	sprite:setCoordinate(400, 500)
 	--sprite:enablePhysics(Object_Types.Object, true)
 
-	-- Create Mob
-
-	-- create scene
-	scene = Scene()
-	scene:loadWallImage("data/stone.png")
-	scene:createBorder(20,20)
 
 	bulletImage = love.graphics.newImage("data/bullet_2_blue.png")
 	bulletSound = love.audio.newSource("data/bullet.wav")
+
+	-- Create Mob
+	math.randomseed(os.time())
+	scene_width, scene_height = scene:getSize()
+	local grid_divisor = 7
+	local width_offset = scene_width / grid_divisor
+	local height_offset = scene_height / grid_divisor
+	local mob_start_x = player.x - width_offset * 0.5 * (grid_divisor - 1)
+	local mob_start_y = player.y - height_offset * 0.5 * (grid_divisor - 1)
+	print(width_offset, height_offset)
+	print(mob_start_x, mob_start_y)
+	for i = 0, grid_divisor - 1 do
+		for j = 0, grid_divisor - 1 do
+			local mob = Mob("data/free-bsd-32.png")
+			mob:setCoordinate(mob_start_x + i * width_offset + width_offset / 2 * (math.random() - 0.5),
+							  mob_start_y + j * height_offset + height_offset / 2 * (math.random() - 0.5))
+			mob:setSize(32, 32)
+			mobs[mob:enablePhysics(Object_Types.Mob, true)] = mob
+		end
+	end
 end
 
 
@@ -131,7 +150,7 @@ function love.update(dt)
 		new_bullet.body:setAngle(math.atan2(normalX,normalY))
 		canShoot = false
 		canShootTimer = canShootTimerMax
-		love.audio.play(bulletSound)
+		--love.audio.play(bulletSound)
 	end
 
 	player:updateCoordinate()
@@ -220,7 +239,7 @@ function beginContact(a, b, coll)
 			elseif collide_user_data == Object_Types.Weapon then
 				-- Get weapon
 			elseif collide_user_data == Object_Types.Mob then
-				if players[player_fixture]:attacked(mobs[collide_fixture].attack_point) then
+				if not players[player_fixture]:attacked(mobs[collide_fixture].attack_point) then
 					print("You are dead")
 				end
 			end
@@ -228,7 +247,7 @@ function beginContact(a, b, coll)
 
 		-- Bullet Collision
 		if bullet_fixture ~= nil then
-			if collide_user_data == Object_Types.Mob then
+			if collide_user_data == Object_Types.Mob and bullets[bullet_fixture] ~= nil then
 				if not mobs[collide_fixture]:attacked(bullets[bullet_fixture].attack_point) then
 					mobs[collide_fixture] = nil
 					collide_fixture:getBody():destroy()

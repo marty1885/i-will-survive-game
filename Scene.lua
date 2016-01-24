@@ -26,7 +26,13 @@ function Scene:initScene()
 	self.height = 0
 end
 
+function Scene:getSize()
+	return self.width * self.wallImage:getWidth(), self.height * self.wallImage:getHeight()
+end
+
 function Scene:createBorder(width, height)
+	self.width = width
+	self.height = height
 	for i=0, height do
 		scene:addWall(0,i)
 		scene:addWall(width,i)
